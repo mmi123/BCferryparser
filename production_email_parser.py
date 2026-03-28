@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 # ------------------------------------------------------------
-#  IMAP CONNECTION
+#  CONFIGURATION
 # ------------------------------------------------------------
 
 IMAP_SERVER = os.getenv("IMAP_SERVER")
@@ -15,7 +15,8 @@ EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 TARGET_SENDER = os.getenv("TARGET_SENDER", "no_reply@bcferries.com")
 
-OUTPUT_DIR = "bookings"
+OUTPUT_JSON_DIR = "bookings"
+OUTPUT_ICAL_FILE = "ferries.ics"
 
 
 # ------------------------------------------------------------
@@ -115,22 +116,22 @@ def parse_email_body(text):
 
 def write_booking_json(booking):
     """Write a single booking to a JSON file."""
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    os.makedirs(OUTPUT_JSON_DIR, exist_ok=True)
 
     ref = booking.get("reference", "UNKNOWN")
-    filename = os.path.join(OUTPUT_DIR, f"{ref}.json")
+    filename = os.path.join(OUTPUT_JSON_DIR, f"{ref}.json")
 
     with open(filename, "w") as f:
         json.dump(booking, f, indent=2)
 
     print(f"Saved booking → {filename}")
 
+
 # ------------------------------------------------------------
-#  ics generate
+#  ICAL GENERATION
 # ------------------------------------------------------------
 
-
-def generate_ical(bookings, output_file="ferries.ics"):
+def generate_ical(bookings, output_file=OUTPUT_ICAL_FILE):
     """Generate a single iCal file containing all ferry bookings."""
     lines = [
         "BEGIN:VCALENDAR",
@@ -140,8 +141,6 @@ def generate_ical(bookings, output_file="ferries.ics"):
     ]
 
     for b in bookings:
-        # Convert date formats
-        # Example input: "05/Apr/2026" + "10:00 PM"
         def to_ical_dt(date_str, time_str):
             dt = datetime.strptime(f"{date_str} {time_str}", "%d/%b/%Y %I:%M %p")
             return dt.strftime("%Y%m%dT%H%M%S")
@@ -177,7 +176,6 @@ def generate_ical(bookings, output_file="ferries.ics"):
     print(f"Generated iCal file → {output_file}")
 
 
-
 # ------------------------------------------------------------
 #  MAIN EXECUTION
 # ------------------------------------------------------------
@@ -195,21 +193,21 @@ def main():
         return
 
     all_bookings = []
-    
+
     for msg_id in data[0].split():
         status, msg_data = mail.fetch(msg_id, "(RFC822)")
         raw_email = msg_data[0][1]
         msg = email.message_from_bytes(raw_email)
-    
+
         body = extract_body(msg)
         bookings = parse_email_body(body)
-    
+
         for booking in bookings:
             write_booking_json(booking)
             all_bookings.append(booking)
-    
+
     # Generate iCal subscription file
-    generate_ical(all_bookings, output_file="ferries.ics")
+    generate_ical(all_bookings)
 
 
 if __name__ == "__main__":
