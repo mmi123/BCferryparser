@@ -1,0 +1,6 @@
+Example .env file
+
+IMAP_SERVER=imap-mail.outlook.com
+EMAIL_USER=emailuser@hotmail.com
+EMAIL_PASS=YOUR_APP_PASSWORD
+TARGET_SENDER=no_reply@bcferries.com
