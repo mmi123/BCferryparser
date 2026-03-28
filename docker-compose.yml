@@ -4,8 +4,20 @@ services:
     container_name: email_parser
     restart: always
     env_file: .env
+    volumes:
+      - ./bookings:/app/bookings
+      - ./calendar:/app
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
+
+  ical-server:
+    image: nginx:alpine
+    container_name: ical_server
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./calendar:/usr/share/nginx/html:ro
