@@ -15,6 +15,8 @@ EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 TARGET_SENDER = os.getenv("TARGET_SENDER", "no_reply@bcferries.com")
 
+OUTPUT_DIR = "bookings"
+
 
 # ------------------------------------------------------------
 #  EMAIL BODY EXTRACTION
@@ -108,6 +110,23 @@ def parse_email_body(text):
 
 
 # ------------------------------------------------------------
+#  JSON OUTPUT
+# ------------------------------------------------------------
+
+def write_booking_json(booking):
+    """Write a single booking to a JSON file."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    ref = booking.get("reference", "UNKNOWN")
+    filename = os.path.join(OUTPUT_DIR, f"{ref}.json")
+
+    with open(filename, "w") as f:
+        json.dump(booking, f, indent=2)
+
+    print(f"Saved booking → {filename}")
+
+
+# ------------------------------------------------------------
 #  MAIN EXECUTION
 # ------------------------------------------------------------
 
@@ -123,8 +142,6 @@ def main():
         print("No messages found from target sender.")
         return
 
-    all_bookings = []
-
     for msg_id in data[0].split():
         status, msg_data = mail.fetch(msg_id, "(RFC822)")
         raw_email = msg_data[0][1]
@@ -132,16 +149,9 @@ def main():
 
         body = extract_body(msg)
         bookings = parse_email_body(body)
-        all_bookings.extend(bookings)
 
-    # Output JSON
-    output = {
-        "generated_at": datetime.utcnow().isoformat(),
-        "total_bookings": len(all_bookings),
-        "bookings": all_bookings
-    }
-
-    print(json.dumps(output, indent=2))
+        for booking in bookings:
+            write_booking_json(booking)
 
 
 if __name__ == "__main__":
