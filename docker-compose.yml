@@ -4,16 +4,17 @@ services:
     container_name: email_parser
     restart: always
     env_file: .env
+    environment:
+      POLL_INTERVAL_SECONDS: 600
     volumes:
       - ./bookings:/app/bookings
-      - ./calendar:/app
+      - ./calendar:/app/calendar
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
-            max-file: "3"
-    environment:
-      POLL_INTERVAL_SECONDS: 600
+        max-file: "3"
+
   ical-server:
     image: nginx:alpine
     container_name: ical_server
