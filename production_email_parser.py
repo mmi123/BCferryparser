@@ -125,6 +125,58 @@ def write_booking_json(booking):
 
     print(f"Saved booking → {filename}")
 
+# ------------------------------------------------------------
+#  ics generate
+# ------------------------------------------------------------
+
+
+def generate_ical(bookings, output_file="ferries.ics"):
+    """Generate a single iCal file containing all ferry bookings."""
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//BC Ferries Parser//EN",
+        "CALSCALE:GREGORIAN"
+    ]
+
+    for b in bookings:
+        # Convert date formats
+        # Example input: "05/Apr/2026" + "10:00 PM"
+        def to_ical_dt(date_str, time_str):
+            dt = datetime.strptime(f"{date_str} {time_str}", "%d/%b/%Y %I:%M %p")
+            return dt.strftime("%Y%m%dT%H%M%S")
+
+        dtstart = to_ical_dt(b["depart_date"], b["depart_time"])
+        dtend = to_ical_dt(b["arrive_date"], b["arrive_time"])
+
+        summary = f"BC Ferries – {b['depart_terminal']} → {b['arrive_terminal']}"
+        description = (
+            f"Booking reference: {b['reference']}\\n"
+            f"Ferry: {b['ferry']}\\n"
+            f"Fare type: {b['fare_type']}\\n"
+            f"Amount paid: ${b['paid']}"
+        )
+
+        lines.extend([
+            "BEGIN:VEVENT",
+            f"UID:{b['reference']}@bcferries",
+            f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
+            f"DTSTART:{dtstart}",
+            f"DTEND:{dtend}",
+            f"SUMMARY:{summary}",
+            f"DESCRIPTION:{description}",
+            f"LOCATION:{b['depart_terminal']}",
+            "END:VEVENT"
+        ])
+
+    lines.append("END:VCALENDAR")
+
+    with open(output_file, "w") as f:
+        f.write("\n".join(lines))
+
+    print(f"Generated iCal file → {output_file}")
+
+
 
 # ------------------------------------------------------------
 #  MAIN EXECUTION
@@ -142,16 +194,22 @@ def main():
         print("No messages found from target sender.")
         return
 
+    all_bookings = []
+    
     for msg_id in data[0].split():
         status, msg_data = mail.fetch(msg_id, "(RFC822)")
         raw_email = msg_data[0][1]
         msg = email.message_from_bytes(raw_email)
-
+    
         body = extract_body(msg)
         bookings = parse_email_body(body)
-
+    
         for booking in bookings:
             write_booking_json(booking)
+            all_bookings.append(booking)
+    
+    # Generate iCal subscription file
+    generate_ical(all_bookings, output_file="ferries.ics")
 
 
 if __name__ == "__main__":
