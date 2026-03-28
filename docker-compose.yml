@@ -11,8 +11,9 @@ services:
       driver: "json-file"
       options:
         max-size: "10m"
-        max-file: "3"
-
+            max-file: "3"
+    environment:
+      POLL_INTERVAL_SECONDS: 600
   ical-server:
     image: nginx:alpine
     container_name: ical_server
